@@ -5,7 +5,7 @@ const isAuthenticated = async (req, res, next) => {
         const token = req.cookies.token;
         if (!token) {
             return res.status(401).json({
-                message: `Token not found ${token} res = ${JSON.stringify(req.cookies)}`,
+                message: `Token not found ${token} res = ${JSON.stringify(req)}`,
                 success: false
             })
         }
