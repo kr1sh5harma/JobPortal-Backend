@@ -17,13 +17,17 @@ app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(cookieParser());
 const corsOptions = {
-    origin:'https://job-portal-frontend-kappa-two.vercel.app',
-    credentials:true
-}
+  origin: [
+    "https://job-portal-frontend-kappa-two.vercel.app",
+    "http://localhost:5173"
+  ],
+  credentials: true,
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE"
+};
 
 app.use(cors(corsOptions));
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 
 // api's
