@@ -100,11 +100,19 @@ export const login = async (req, res) => {
             profile: user.profile
 
         }
-        return res.status(200).cookie("token", token, { maxAge: 1 * 24 * 60 * 60 * 1000, httpsOnly: true, sameSite: 'strict' }).json({
-            message: `Welcome back ${user.fullname}`,
-            user,
-            success: true
-        })
+            return res
+            .status(200)
+            .cookie("token", token, {
+                maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
+                httpOnly: true,  // ✅ correct property name
+                secure: true,    // ✅ needed for HTTPS (Render uses HTTPS)
+                sameSite: "none" // ✅ required for cross-origin cookies (Vercel + Render)
+            })
+            .json({
+                message: `Welcome back ${user.fullname}`,
+                user,
+                success: true
+            });
 
     }
     catch (error) {
