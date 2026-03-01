@@ -7,7 +7,7 @@ import cloudinary from "../utils/cloudinary.js";
 export const register = async (req, res) => {
     try {
         const { fullname, email, phoneNumber, password, role } = req.body;
-        
+
         if (!fullname || !email || !phoneNumber || !password || !role) {
             return res.status(400).json({
                 message: "All fields are required",
@@ -34,7 +34,7 @@ export const register = async (req, res) => {
             phoneNumber,
             password: hashedPassword,
             role,
-            profile:{
+            profile: {
                 profilePhoto: cloudResponse.secure_url,
             }
         })
@@ -100,7 +100,7 @@ export const login = async (req, res) => {
             profile: user.profile
 
         }
-            return res
+        return res
             .status(200)
             .cookie("token", token, {
                 maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
@@ -111,6 +111,7 @@ export const login = async (req, res) => {
             .json({
                 message: `Welcome back ${user.fullname}`,
                 user,
+                token,
                 success: true
             });
 
@@ -122,7 +123,7 @@ export const login = async (req, res) => {
 
 export const logout = async (req, res) => {
     try {
-        return res.status(200).cookie('token', "", { maxAge: 0 }).json({
+        return res.status(200).cookie('token', "", { maxAge: 0, httpOnly: true, secure: true, sameSite: "none" }).json({
             message: "Logged out successfully.",
             success: true
         })
@@ -142,9 +143,9 @@ export const updateProfile = async (req, res) => {
 
         const fileUri = getDataUri(file);
         const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-        
-        if(cloudResponse){
-            user.profile.resume= cloudResponse.secure_url;
+
+        if (cloudResponse) {
+            user.profile.resume = cloudResponse.secure_url;
             user.profile.resumeOriginalName = file.originalname;
         }
 
