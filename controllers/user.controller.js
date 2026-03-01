@@ -15,16 +15,21 @@ export const register = async (req, res) => {
             });
         };
 
-        const file = req.file;
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-
         const user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({
                 message: "User already exists.",
                 success: false
             })
+        }
+
+        // Handle optional profile photo upload
+        let profilePhotoUrl = "";
+        const file = req.file;
+        if (file) {
+            const fileUri = getDataUri(file);
+            const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            profilePhotoUrl = cloudResponse.secure_url;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,11 +40,11 @@ export const register = async (req, res) => {
             password: hashedPassword,
             role,
             profile: {
-                profilePhoto: cloudResponse.secure_url,
+                profilePhoto: profilePhotoUrl,
             }
         })
 
-        return res.status(200).json({
+        return res.status(201).json({
             message: 'Account created successfully.',
             success: true
         });
@@ -66,7 +71,7 @@ export const login = async (req, res) => {
         let user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({
-                message: "email not found.",
+                message: "Email not found.",
                 success: false
             })
         }
@@ -89,7 +94,7 @@ export const login = async (req, res) => {
         const tokenData = {
             userId: user._id
         }
-        const token = await jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
+        const token = jwt.sign(tokenData, process.env.SECRET_KEY, { expiresIn: '1d' });
 
         user = {
             _id: user._id,
@@ -98,15 +103,15 @@ export const login = async (req, res) => {
             phoneNumber: user.phoneNumber,
             role: user.role,
             profile: user.profile
-
         }
+
         return res
             .status(200)
             .cookie("token", token, {
-                maxAge: 1 * 24 * 60 * 60 * 1000, // 1 day
-                httpOnly: true,  // ✅ correct property name
-                secure: true,    // ✅ needed for HTTPS (Render uses HTTPS)
-                sameSite: "none" // ✅ required for cross-origin cookies (Vercel + Render)
+                maxAge: 1 * 24 * 60 * 60 * 1000,
+                httpOnly: true,
+                secure: true,
+                sameSite: "none"
             })
             .json({
                 message: `Welcome back ${user.fullname}`,
@@ -118,6 +123,10 @@ export const login = async (req, res) => {
     }
     catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
     }
 }
 
@@ -130,6 +139,10 @@ export const logout = async (req, res) => {
     }
     catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
     }
 }
 
@@ -141,26 +154,26 @@ export const updateProfile = async (req, res) => {
         const userId = req.id;
         let user = await User.findById(userId);
 
-        const fileUri = getDataUri(file);
-        const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
-
-        if (cloudResponse) {
-            user.profile.resume = cloudResponse.secure_url;
-            user.profile.resumeOriginalName = file.originalname;
+        if (!user) {
+            return res.status(400).json({
+                message: "User not found",
+                success: false
+            })
         }
 
+        // Handle optional resume upload
+        if (file) {
+            const fileUri = getDataUri(file);
+            const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+            if (cloudResponse) {
+                user.profile.resume = cloudResponse.secure_url;
+                user.profile.resumeOriginalName = file.originalname;
+            }
+        }
 
         let skillsArray;
         if (skills) {
             skillsArray = skills.split(",");
-        }
-
-
-        if (!user) {
-            return res.status(400).json({
-                message: "user not found",
-                success: false
-            })
         }
 
         if (fullname) user.fullname = fullname;
@@ -168,7 +181,6 @@ export const updateProfile = async (req, res) => {
         if (phoneNumber) user.phoneNumber = phoneNumber;
         if (bio) user.profile.bio = bio;
         if (skills) user.profile.skills = skillsArray;
-
 
         await user.save();
 
@@ -179,11 +191,10 @@ export const updateProfile = async (req, res) => {
             phoneNumber: user.phoneNumber,
             role: user.role,
             profile: user.profile
-
         }
 
         return res.status(200).json({
-            message: "profile updated successfully",
+            message: "Profile updated successfully",
             user,
             success: true
         })
@@ -191,5 +202,9 @@ export const updateProfile = async (req, res) => {
     }
     catch (error) {
         console.log(error);
+        return res.status(500).json({
+            message: "Internal server error",
+            success: false
+        });
     }
 }
